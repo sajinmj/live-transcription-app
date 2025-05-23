@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Saved Transcripts</title>
+</head>
+<body>
+  <h1>Saved Transcript Reports</h1>
+  <ul>
+    {% for file in files %}
+      <li>
+        <a href="{{ url_for('show_report', filename=file) }}">{{ file }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+  <br>
+  <a href="{{ url_for('index') }}">← Back to Transcription</a>
+</body>
+</html>

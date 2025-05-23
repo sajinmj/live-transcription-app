@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transcript Report - {{ filename }}</title>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f9f9f9; }
+    h1 { font-size: 1.5em; }
+    pre {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 1em;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    a { display: block; margin-top: 20px; font-size: 1em; text-decoration: none; color: #007BFF; }
+  </style>
+</head>
+<body>
+  <h1>Transcript Report: {{ filename }}</h1>
+  <pre>{{ content }}</pre>
+  <a href="/reports"> Back to All Reports</a>
+  <a href="/"> Home</a>
+</body>
+</html>

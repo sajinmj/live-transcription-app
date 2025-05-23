@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Transcription with Deepgram</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f0f0f0; }
+    #transcript { padding: 1em; background: #fff; border-radius: 8px; font-size: 1.2em; min-height: 100px; }
+    button { margin-top: 20px; font-size: 1.2em; padding: 0.5em 1em; margin-right: 10px; }
+    a { display: block; margin-top: 20px; font-size: 1em; text-decoration: none; color: #007BFF; }
+  </style>
+</head>
+<body>
+  <h1>Live Speech to Text</h1>
+  <div id="transcript">Press Start to begin...</div>
+  <button id="startBtn">🎤 Start</button>
+  <button id="stopBtn" disabled>🛑 Stop</button>
+  <a href="/reports">📄 View All Saved Reports</a>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const transcriptDiv = document.getElementById('transcript');
+
+    let deepgramSocket;
+    let mediaRecorder;
+    let fullTranscript = "";
+
+    startBtn.onclick = async () => {
+      if (!deepgramSocket || deepgramSocket.readyState !== WebSocket.OPEN) {
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        transcriptDiv.textContent = "Connecting to Deepgram...";
+        fullTranscript = "";
+        await startTranscription();
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        stopBtn.disabled = true;
+        startBtn.disabled = false;
+        if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
+          deepgramSocket.close();
+        }
+        sendTranscript(fullTranscript);
+      }
+    };
+
+    async function startTranscription() {
+      const apiKey = "a03a9bd3623eb702599bd7b7f4fdff10d7592f17"; // API key
+      deepgramSocket = new WebSocket(
+        "wss://api.deepgram.com/v1/listen",
+        ["token", apiKey]
+      );
+
+      deepgramSocket.onopen = async () => {
+        transcriptDiv.textContent = "Listening...";
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0 && deepgramSocket.readyState === WebSocket.OPEN) {
+            deepgramSocket.send(event.data);
+          }
+        };
+
+        mediaRecorder.start(250);
+      };
+
+      deepgramSocket.onmessage = (message) => {
+        const data = JSON.parse(message.data);
+        if (data.channel?.alternatives[0]?.transcript) {
+          const transcript = data.channel.alternatives[0].transcript;
+          transcriptDiv.textContent = transcript;
+          fullTranscript += transcript + " ";
+        }
+      };
+
+      deepgramSocket.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        transcriptDiv.textContent = "[Error connecting to Deepgram]";
+      };
+
+      deepgramSocket.onclose = () => {
+        transcriptDiv.textContent += "\n[Connection closed]";
+      };
+    }
+
+    function sendTranscript(text) {
+      fetch("/save_transcript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: text })
+      })
+      .then(response => response.text())
+      .then(filename => {
+        window.location.href = `/report/${filename}`;
+      })
+      .catch(err => console.error("Error saving transcript:", err));
+    }
+  </script>
+</body>
+</html>

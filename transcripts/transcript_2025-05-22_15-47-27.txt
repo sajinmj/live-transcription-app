@@ -1,0 +1,1 @@
+what we are going to do is like we are we are planning to make a system which will listen our conversations and then at transcribe the conversations text using any api call that that is the main
