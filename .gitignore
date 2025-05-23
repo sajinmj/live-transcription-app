@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+.ENV/
+/venv
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Environment Variables
+.env
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Flask cache
+instance/
+*.db
+*.sqlite3
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# VSCode Python environment
+.python-version
+
+# Node (if frontend tools are used)
+node_modules/
