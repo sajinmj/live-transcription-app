@@ -48,3 +48,7 @@ htmlcov/
 
 # Node (if frontend tools are used)
 node_modules/
+
+.env
+*.json
+

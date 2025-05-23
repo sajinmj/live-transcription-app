@@ -1,107 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Live Transcription with Deepgram</title>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Cloud Speech to Text Live</title>
   <style>
-    body { font-family: sans-serif; padding: 2em; background: #f0f0f0; }
-    #transcript { padding: 1em; background: #fff; border-radius: 8px; font-size: 1.2em; min-height: 100px; }
-    button { margin-top: 20px; font-size: 1.2em; padding: 0.5em 1em; margin-right: 10px; }
-    a { display: block; margin-top: 20px; font-size: 1em; text-decoration: none; color: #007BFF; }
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+      background-color: #f5f5f5;
+    }
+    #transcription {
+      border: 2px solid #ccc;
+      background: white;
+      padding: 1em;
+      height: 200px;
+      overflow-y: auto;
+      font-size: 1.1em;
+      white-space: pre-line;
+    }
+    button {
+      font-size: 1.2em;
+      padding: 0.6em 1.2em;
+      cursor: pointer;
+      margin-bottom: 1em;
+    }
+    button.recording {
+      background-color: #d9534f;
+      color: white;
+      border: none;
+    }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
-  <h1>Live Speech to Text</h1>
-  <div id="transcript">Press Start to begin...</div>
-  <button id="startBtn">🎤 Start</button>
-  <button id="stopBtn" disabled>🛑 Stop</button>
-  <a href="/reports">📄 View All Saved Reports</a>
+  <h1>Google Cloud Speech-to-Text (Live)</h1>
+  <button id="mic-button">🎤 Start Listening</button>
+  <div id="transcription">Press the mic button to start...</div>
 
   <script>
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const transcriptDiv = document.getElementById('transcript');
+    const socket = io();
+    const micButton = document.getElementById('mic-button');
+    const transcriptionDiv = document.getElementById('transcription');
 
-    let deepgramSocket;
-    let mediaRecorder;
-    let fullTranscript = "";
+    let isRecording = false;
+    let audioContext, processor, input, globalStream;
+    let finalTranscript = '';
 
-    startBtn.onclick = async () => {
-      if (!deepgramSocket || deepgramSocket.readyState !== WebSocket.OPEN) {
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        transcriptDiv.textContent = "Connecting to Deepgram...";
-        fullTranscript = "";
-        await startTranscription();
-      }
-    };
+    micButton.addEventListener('click', async () => {
+      if (!isRecording) {
+        micButton.classList.add('recording');
+        micButton.textContent = '🛑 Stop Listening';
+        transcriptionDiv.innerText = 'Listening...';
+        finalTranscript = '';
 
-    stopBtn.onclick = () => {
-      if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        stopBtn.disabled = true;
-        startBtn.disabled = false;
-        if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
-          deepgramSocket.close();
+        try {
+          await startRecording();
+          socket.emit('start_transcription');
+          isRecording = true;
+        } catch (e) {
+          transcriptionDiv.innerText = 'Mic access error: ' + e.message;
+          micButton.classList.remove('recording');
         }
-        sendTranscript(fullTranscript);
+      } else {
+        micButton.classList.remove('recording');
+        micButton.textContent = '🎤 Start Listening';
+        stopRecording();
+        socket.emit('stop_transcription');
+        transcriptionDiv.innerText = finalTranscript + '\n[Stopped]';
+        isRecording = false;
       }
-    };
+    });
 
-    async function startTranscription() {
-      const apiKey = "a03a9bd3623eb702599bd7b7f4fdff10d7592f17"; // API key
-      deepgramSocket = new WebSocket(
-        "wss://api.deepgram.com/v1/listen",
-        ["token", apiKey]
-      );
+    async function startRecording() {
+      globalStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new AudioContext({ sampleRate: 16000 });
+      if (audioContext.state === 'suspended') await audioContext.resume();
 
-      deepgramSocket.onopen = async () => {
-        transcriptDiv.textContent = "Listening...";
+      input = audioContext.createMediaStreamSource(globalStream);
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && deepgramSocket.readyState === WebSocket.OPEN) {
-            deepgramSocket.send(event.data);
-          }
-        };
-
-        mediaRecorder.start(250);
+      processor.onaudioprocess = (e) => {
+        const floatSamples = e.inputBuffer.getChannelData(0);
+        const int16Samples = convertFloat32ToInt16(floatSamples);
+        const base64Data = arrayBufferToBase64(int16Samples.buffer);
+        socket.emit('audio_chunk', { audio_data: base64Data });
       };
 
-      deepgramSocket.onmessage = (message) => {
-        const data = JSON.parse(message.data);
-        if (data.channel?.alternatives[0]?.transcript) {
-          const transcript = data.channel.alternatives[0].transcript;
-          transcriptDiv.textContent = transcript;
-          fullTranscript += transcript + " ";
-        }
-      };
-
-      deepgramSocket.onerror = (err) => {
-        console.error("WebSocket error:", err);
-        transcriptDiv.textContent = "[Error connecting to Deepgram]";
-      };
-
-      deepgramSocket.onclose = () => {
-        transcriptDiv.textContent += "\n[Connection closed]";
-      };
+      input.connect(processor);
+      processor.connect(audioContext.destination);
     }
 
-    function sendTranscript(text) {
-      fetch("/save_transcript", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: text })
-      })
-      .then(response => response.text())
-      .then(filename => {
-        window.location.href = `/report/${filename}`;
-      })
-      .catch(err => console.error("Error saving transcript:", err));
+    function stopRecording() {
+      if (processor) processor.disconnect();
+      if (input) input.disconnect();
+      if (audioContext) audioContext.close();
+      if (globalStream) globalStream.getTracks().forEach(t => t.stop());
     }
+
+    function convertFloat32ToInt16(buffer) {
+      const buf = new Int16Array(buffer.length);
+      for (let i = 0; i < buffer.length; i++) {
+        let s = Math.max(-1, Math.min(1, buffer[i]));
+        buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return buf;
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      bytes.forEach(b => binary += String.fromCharCode(b));
+      return btoa(binary);
+    }
+
+    socket.on('transcript_update', (data) => {
+      if (data.is_final) {
+        finalTranscript += data.transcript + '\n';
+      }
+      transcriptionDiv.innerText = finalTranscript + (data.is_final ? '' : data.transcript + '...');
+      transcriptionDiv.scrollTop = transcriptionDiv.scrollHeight;
+    });
+
+    socket.on('transcript_error', (data) => {
+      transcriptionDiv.innerText = '[Error] ' + data.error;
+    });
   </script>
 </body>
 </html>
