@@ -29,6 +29,14 @@
       color: white;
       border: none;
     }
+    .report-btn {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 0.6em 1.2em;
+      text-decoration: none;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
 </head>
@@ -36,6 +44,9 @@
   <h1>Google Cloud Speech-to-Text (Live)</h1>
   <button id="mic-button">🎤 Start Listening</button>
   <div id="transcription">Press the mic button to start...</div>
+
+  <!-- ✅ New Button for Viewing Reports -->
+  <a href="/reports" class="report-btn">📄 View Saved Reports</a>
 
   <script>
     const socket = io();

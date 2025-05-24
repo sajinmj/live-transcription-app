@@ -23,6 +23,31 @@
       white-space: pre-wrap;
       font-size: 1.1rem;
     }
+    .back-btn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.6em 1.2em;
+      background-color: #6c757d;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .back-btn:hover {
+      background-color: #5a6268;
+    }
+    .keywords {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ccc;
+    }
+    .keywords h2 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .keywords ul {
+      list-style: disc;
+      padding-left: 1.5rem;
+    }
   </style>
 </head>
 <body>
@@ -30,6 +55,24 @@
     <h1>Transcript Report</h1>
     <p><strong>Filename:</strong> {{ filename }}</p>
     <pre>{{ content }}</pre>
+
+    <div class="keywords">
+      <h2>Extracted Keywords</h2>
+      <p><strong>Symptoms:</strong></p>
+      <ul>
+        {% for symptom in keywords.symptoms %}
+          <li>{{ symptom }}</li>
+        {% endfor %}
+      </ul>
+      <p><strong>Time Expressions:</strong></p>
+      <ul>
+        {% for time in keywords.times %}
+          <li>{{ time }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <a href="/reports" class="back-btn">⬅ Back to Reports</a>
   </div>
 </body>
 </html>
