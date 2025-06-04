@@ -10,7 +10,7 @@ import spacy
 import dateparser
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 client = speech.SpeechClient()
 
@@ -130,17 +130,15 @@ def listen_print_loop(responses, client_id):
             transcript = result.alternatives[0].transcript
             is_final = result.is_final
 
-            socketio.emit('transcript_update', {
-                'transcript': transcript,
-                'is_final': is_final
-            }, room=client_id)
+            socketio.emit('transcript_update', {'transcript': transcript, 'is_final': is_final})
+
 
             if is_final:
                 print(f"Final transcript from {client_id}: {transcript}")
                 final_transcripts.setdefault(client_id, []).append(transcript)
     except Exception as e:
         print(f"Error in listen_print_loop: {e}")
-        socketio.emit('transcript_error', {'error': str(e)}, room=client_id)
+        socketio.emit('transcript_error', {'error': str(e)}, to=client_id)
 
 @socketio.on("start_transcription")
 def start_transcription():

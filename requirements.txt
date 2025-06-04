@@ -1,0 +1,6 @@
+Flask==2.3.3
+Flask-SocketIO==5.3.6
+eventlet==0.35.1
+google-cloud-speech==2.26.0
+python-dotenv==1.0.1
+ffmpeg-python==0.2.0
