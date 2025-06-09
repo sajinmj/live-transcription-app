@@ -30,7 +30,12 @@ audio_queues = {}
 final_transcripts = {}
 
 nlp = spacy.load("en_core_web_sm")
-SYMPTOMS_KEYWORDS = ['pain', 'fever', 'cough', 'fatigue', 'vomiting', 'headache', 'nausea', 'rash']
+SYMPTOMS_KEYWORDS = [
+    "fever", "cough", "headache", "nausea", "pain", "chills", "fatigue", "vomiting", "rash", "sore throat",
+    "shortness of breath", "dizziness", "runny nose", "diarrhea", "constipation", "itching", "sneezing",
+    "muscle pain", "joint pain", "abdominal pain", "back pain", "weakness", "loss of appetite", "sweating",
+    "bleeding", "congestion", "chest pain", "cold", "burning sensation", "swelling", "palpitations"
+]
 
 def extract_keywords(text):
     doc = nlp(text)

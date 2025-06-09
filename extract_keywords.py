@@ -5,7 +5,12 @@ import re
 nlp = spacy.load("en_core_web_sm")
 
 
-SYMPTOM_KEYWORDS = ["fever", "cough", "headache", "nausea", "pain", "chills", "fatigue"]
+SYMPTOMS_KEYWORDS = [
+    "fever", "cough", "headache", "nausea", "pain", "chills", "fatigue", "vomiting", "rash", "sore throat",
+    "shortness of breath", "dizziness", "runny nose", "diarrhea", "constipation", "itching", "sneezing",
+    "muscle pain", "joint pain", "abdominal pain", "back pain", "weakness", "loss of appetite", "sweating",
+    "bleeding", "congestion", "chest pain", "cold", "burning sensation", "swelling", "palpitations"
+]
 DISEASE_KEYWORDS = ["diabetes", "asthma", "covid", "flu", "malaria", "tuberculosis", "hypertension"]
 
 
