@@ -6,8 +6,13 @@ from flask_socketio import SocketIO, emit
 from google.cloud import speech
 import base64
 from datetime import datetime
-import spacy
-import dateparser
+from dotenv import load_dotenv
+import google.generativeai as genai
+import json
+
+# Load Gemini API Key
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
@@ -29,35 +34,31 @@ streaming_config = speech.StreamingRecognitionConfig(
 audio_queues = {}
 final_transcripts = {}
 
-nlp = spacy.load("en_core_web_sm")
-SYMPTOMS_KEYWORDS = [
-    "fever", "cough", "headache", "nausea", "pain", "chills", "fatigue", "vomiting", "rash", "sore throat",
-    "shortness of breath", "dizziness", "runny nose", "diarrhea", "constipation", "itching", "sneezing",
-    "muscle pain", "joint pain", "abdominal pain", "back pain", "weakness", "loss of appetite", "sweating",
-    "bleeding", "congestion", "chest pain", "cold", "burning sensation", "swelling", "palpitations"
-]
-
 def extract_keywords(text):
-    doc = nlp(text)
-    times = []
-    symptoms = []
-    diseases = [] 
+    prompt = f"""
+    Analyze the following doctor-patient conversation. Extract three things:
+    1. Symptoms mentioned by the patient.
+    2. Time expressions (e.g., 'since yesterday', 'for 3 days').
+    3. Medicines prescribed or discussed.
 
-    for ent in doc.ents:
-        if ent.label_ in ["TIME", "DATE"]:
-            parsed_time = dateparser.parse(ent.text)
-            if parsed_time:
-                times.append(ent.text)
+    Format the result as JSON like this:
+    {{
+        "symptoms": ["example1", "example2"],
+        "times": ["example1", "example2"],
+        "medicines": ["example1", "example2"]
+    }}
 
-    for token in doc:
-        if token.lemma_.lower() in SYMPTOMS_KEYWORDS:
-            symptoms.append(token.text)
+    Transcript:
+    {text}
+    """
 
-    return {
-        "times": list(set(times)),
-        "symptoms": list(set(symptoms)),
-        "diseases": list(set(diseases))
-    }
+    model = genai.GenerativeModel("gemini-pro")
+    try:
+        response = model.generate_content(prompt)
+        return json.loads(response.text)
+    except Exception as e:
+        print("Gemini error:", e)
+        return {"symptoms": [], "times": [], "medicines": []}
 
 @app.route("/")
 def index():
@@ -136,7 +137,6 @@ def listen_print_loop(responses, client_id):
             is_final = result.is_final
 
             socketio.emit('transcript_update', {'transcript': transcript, 'is_final': is_final})
-
 
             if is_final:
                 print(f"Final transcript from {client_id}: {transcript}")

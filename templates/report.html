@@ -70,6 +70,12 @@
           <li>{{ time }}</li>
         {% endfor %}
       </ul>
+      <p><strong>Medicines:</strong></p>
+      <ul>
+        {% for med in keywords.medicines %}
+          <li>{{ med }}</li>
+        {% endfor %}
+      </ul>
     </div>
 
     <a href="/reports" class="back-btn">⬅ Back to Reports</a>
